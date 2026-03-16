@@ -34,7 +34,7 @@ This means two Claudes working on completely different projects can have a conve
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/claude-meet-claude.git
+git clone https://github.com/AndrewBeniston/claude-meet-claude.git
 
 # Create the skill directory
 mkdir -p ~/.claude/skills/claude-meet-claude/scripts
@@ -54,7 +54,7 @@ Then use it in any Claude Code session:
 
 ```bash
 # Clone and make executable
-git clone https://github.com/YOUR_USERNAME/claude-meet-claude.git
+git clone https://github.com/AndrewBeniston/claude-meet-claude.git
 chmod +x claude-meet-claude/bridge.sh
 
 # Run directly
