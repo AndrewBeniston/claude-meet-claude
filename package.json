@@ -1,0 +1,33 @@
+{
+  "name": "claude-meet-claude",
+  "version": "1.0.0",
+  "description": "Bridge two Claude Code sessions for temporary conversations with full project context",
+  "type": "module",
+  "bin": {
+    "claude-meet-claude": "./cli.mjs"
+  },
+  "scripts": {
+    "start": "node cli.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AndrewBeniston/claude-meet-claude.git"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "multi-agent",
+    "ai",
+    "bridge",
+    "conversation"
+  ],
+  "author": "Andrew Beniston",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/AndrewBeniston/claude-meet-claude/issues"
+  },
+  "homepage": "https://github.com/AndrewBeniston/claude-meet-claude#readme",
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.76"
+  }
+}
