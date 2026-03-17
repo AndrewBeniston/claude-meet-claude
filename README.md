@@ -1,81 +1,53 @@
 # Claude Meet Claude
 
-Bridge two running Claude Code sessions so they can temporarily talk to each other. Each Claude retains its full project context. Original sessions are never modified.
+Bridge two Claude Code sessions so they can temporarily talk to each other. Each Claude retains its full project context. Original sessions are never modified.
 
 ## How It Works
 
-1. Auto-detects all Zellij sessions with Claude Code conversations
-2. Maps each to its project directory and most recent conversation ID
-3. Forks both conversations (originals stay untouched and can keep running)
-4. Relays messages between the forks until they reach agreement or hit max turns
-5. Saves a markdown transcript to `~/claude-meetings/`
-6. Optionally drops a `.claude-meeting.md` into each project root so each Claude can absorb the results
+1. Scans `~/.claude/projects/` to discover all Claude Code conversations
+2. Forks both conversations using the Claude Agent SDK (originals stay untouched)
+3. Relays messages between the forks with **real-time streaming** output
+4. Saves a markdown transcript to `~/claude-meetings/`
+5. Prints ready-to-paste prompts so you can share results with your live sessions
 
 ### The key insight
 
-`claude --resume SESSION_ID --fork-session -p "message"` lets you:
+The Claude Agent SDK's `resume` + `forkSession` options let you:
 - Resume an existing conversation with full project context
 - Fork it so the original is never modified
-- Send a one-shot message and capture the response
+- Stream responses in real-time as each Claude types
 - Continue the forked conversation across multiple turns
 
 This means two Claudes working on completely different projects can have a conversation where each one knows everything about its own project.
 
 ## Requirements
 
-- **Zellij** (terminal multiplexer) with named sessions
-- **Claude Code** CLI installed
-- **fzf** for interactive session picker
-- At least two Zellij sessions with Claude Code conversation history
+- **Node.js** 18+
+- **Claude Code** CLI installed and authenticated
+- At least two projects with Claude Code conversation history
 
 ## Installation
 
-### As a Claude Code Skill (recommended)
-
 ```bash
-# Clone the repo
 git clone https://github.com/AndrewBeniston/claude-meet-claude.git
-
-# Create the skill directory
-mkdir -p ~/.claude/skills/claude-meet-claude/scripts
-
-# Copy files
-cp claude-meet-claude/bridge.sh ~/.claude/skills/claude-meet-claude/scripts/bridge.sh
-cp claude-meet-claude/SKILL.md ~/.claude/skills/claude-meet-claude/SKILL.md
-chmod +x ~/.claude/skills/claude-meet-claude/scripts/bridge.sh
-```
-
-Then use it in any Claude Code session:
-```
-/claude-meet-claude
-```
-
-### Standalone (no Claude Code skill)
-
-```bash
-# Clone and make executable
-git clone https://github.com/AndrewBeniston/claude-meet-claude.git
-chmod +x claude-meet-claude/bridge.sh
-
-# Run directly
-./claude-meet-claude/bridge.sh --list
-./claude-meet-claude/bridge.sh --a my-project --b other-project --topic "How should we integrate?"
+cd claude-meet-claude
+npm install
 ```
 
 ## Usage
 
-### Interactive mode (fzf picker)
+### Interactive mode
 
 ```bash
-./bridge.sh
+node cli.mjs
 ```
 
-Shows an fzf picker to select two sessions and prompts for a topic.
+Shows a numbered list of sessions to pick from, then prompts for a topic.
 
 ### With arguments
 
 ```bash
-./bridge.sh \
+node cli.mjs \
   --a help-self \
   --b tungsten-flow \
   --topic "How should the auth tokens be shared between projects" \
@@ -86,48 +58,44 @@ Shows an fzf picker to select two sessions and prompts for a topic.
 ### List available sessions
 
 ```bash
-./bridge.sh --list
+node cli.mjs --list
 ```
 
 ### Flags
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--a <session>` | First Zellij session name | (interactive picker) |
-| `--b <session>` | Second Zellij session name | (interactive picker) |
-| `--topic <topic>` | What they should discuss | (interactive prompt) |
+| `--a <name>` | First session (project name or ID) | (interactive picker) |
+| `--b <name>` | Second session (project name or ID) | (interactive picker) |
+| `--topic <text>` | What they should discuss | (interactive prompt) |
 | `--turns <n>` | Max conversation turns | 6 |
 | `--inject` | Drop `.claude-meeting.md` into each project root | off |
 | `--list` | List available sessions and exit | - |
+| `-h, --help` | Show help | - |
 
-## What `--inject` does
+## Sharing results with your live sessions
 
-After the meeting, writes a `.claude-meeting.md` file into each project's root directory containing:
-- What the meeting was about
-- Who the other Claude was
-- Path to the full transcript
+After the meeting, the CLI prints ready-to-paste messages:
 
-Then you just go to each Claude session and say: **`Read .claude-meeting.md`**
+```
+Copy to help-self:
+  Read ~/claude-meetings/2026-03-16-help-self-x-tungsten-flow-auth.md — meeting with tungsten-flow about auth integration
+
+Copy to tungsten-flow:
+  Read ~/claude-meetings/2026-03-16-help-self-x-tungsten-flow-auth.md — meeting with help-self about auth integration
+```
+
+With `--inject`, it also drops a `.claude-meeting.md` into each project root so you can just say: **`Read .claude-meeting.md`**
 
 ## Session Discovery
 
-The script finds sessions in three ways:
+The CLI scans `~/.claude/projects/` and:
+- Finds all conversation JSONL files
+- Sorts by most recently active
+- Reconstructs the original project path using a greedy directory matcher
+- Displays project names with relative timestamps
 
-1. **Zellij layout inspection** — looks for `command="claude"` panes and extracts their cwd
-2. **Relative cwd resolution** — handles panes with relative cwds (e.g., `cwd="Git/my-project"`)
-3. **Session name fallback** — if no Claude pane is found, tries matching the Zellij session name to a project directory in `~/Documents/01-Projects/Git/`
-
-## Transcripts
-
-All meeting transcripts are saved to `~/claude-meetings/` with filenames like:
-```
-2026-03-16-2315-help-self-x-audio-diarizer-auth-integration.md
-```
-
-Each transcript includes:
-- Date, session names, project paths
-- The discussion topic
-- Full conversation with turn labels
+No Zellij, tmux, or any terminal multiplexer required.
 
 ## How the fork mechanism works
 
@@ -146,17 +114,29 @@ Original Session A (untouched)          Original Session B (untouched)
 - Forks inherit the full conversation history and project context
 - Original sessions are never modified and can keep running
 - Forked sessions are automatically cleaned up after the meeting
+- Uses your Claude Code subscription — no separate API key needed
+
+## Transcripts
+
+Saved to `~/claude-meetings/` with filenames like:
+```
+2026-03-16-2315-help-self-x-audio-diarizer-auth-integration.md
+```
 
 ## Auto-completion detection
 
-The relay loop watches for keywords like "concluded", "agreed", "wrap up", "nothing more" to detect when the Claudes have reached agreement and end the meeting early.
+The relay loop watches for keywords like "concluded", "agreed", "wrap up" to detect when the Claudes have reached agreement and end the meeting early.
+
+## Bash version
+
+A standalone bash script (`bridge.sh`) is also included for Zellij users. It uses the Claude CLI directly instead of the SDK and includes Zellij-specific session discovery. See the script for usage.
 
 ## Limitations
 
-- Each turn is a full Claude API call with the session's context — longer histories = more tokens/cost
+- Each turn is a full API call with the session's full context — longer histories = more tokens
 - Sessions must have at least one prior conversation in their history
-- The 300-word response limit per turn keeps costs manageable
-- Cross-session Zellij floating pane injection doesn't work reliably when no client is viewing the target session (hence the `.claude-meeting.md` file approach)
+- The 300-word response limit per turn keeps turns focused
+- Live interactive sessions can't automatically receive the transcript — you need to paste the `Read` command
 
 ## License
 
